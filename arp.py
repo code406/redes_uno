@@ -265,7 +265,7 @@ def initARP(interface):
     if ARPResolution(myIP) != None:
         print("[init_arp] Someone has my IP!!")
         return False
-    
+
     print("[init_arp] ARP initialized succesfully")
     arpInitialized = True
     return True
@@ -296,7 +296,7 @@ def ARPResolution(ip):
     with cacheLock:
         mac = cache.get(ip)
         if mac != None:
-            print("[ARPResolution] Mac was cached, returning MAC: ")
+            print("[ARPResolution] Mac was cached:", mac)
             return mac
 
     with globalLock:
@@ -313,7 +313,7 @@ def ARPResolution(ip):
                 data = createARPRequest(ip)
                 sendEthernetFrame(data, len(data), bytes([0x08,0x06]), broadcastAddr)
             else:
-                print("[ARPResolution] Resolved MAC: ")
+                print("[ARPResolution] Resolved MAC:", resolvedMAC)
                 return resolvedMAC
     print("[ARPResolution] MAC unresolved")
     return None
