@@ -19,9 +19,9 @@ IP_MAX_HLEN = 60
 #Valor de TTL por defecto
 DEFAULT_TTL = 64
 #Protocolos
-ICMP = b'\x01'
-TCP = b'\x06'
-UDP = b'\x11'
+ICMP = 1
+TCP = 6
+UDP = 17
 
 
 def chksum(msg):
@@ -91,9 +91,8 @@ def getDefaultGW(interface):
     '''
     p = subprocess.Popen(['ip r | grep default | awk \'{print $3}\''], stdout=subprocess.PIPE, shell=True)
     dfw = p.stdout.read().decode('utf-8')
-    print(dfw)
+    #print(dfw)
     return struct.unpack('!I',socket.inet_aton(dfw))[0]
-
 
 
 def process_IP_datagram(us,header,data,srcMac):
@@ -142,15 +141,29 @@ def process_IP_datagram(us,header,data,srcMac):
     ipDestino = data[16:20]
     options = data[20:]
 
-    if chksum(data) != 0: return
+    print("[process_IP_datagram] Extracted all fields from datagram")
+
+    #if chksum(data) != 0: 
+    #    print("[process_IP_datagram] Checksum != 0. Returning")
+    #    return
     #OJO: Dice "Analizar los bits de de MF y el offset". Que analizamos de mf??
     #OJO: Dice "para obtener el valor real de offset se debe multiplicar por 8"
-    if offset != 0: return #
-    logging.debug(ihl, IPID, flagDF, flagMF, offset, ipOrigen, ipDestino, protocol) #
+    #if offset != 0: return #
+    logging.debug(ihl)
+    #logging.debug(struct.unpack('!H', totalLength)[0])
+    logging.debug(IPID_read)
+    logging.debug(flagDF)
+    logging.debug(flagMF)
+    logging.debug(offset*8)
+    logging.debug(ipOrigen)
+    logging.debug(ipDestino)
+    logging.debug(protocol)
 
     if protocols.get(protocol):
-        payload = data[ihl:totalLength] #ihl->totalength
+        payload = data[ihl:struct.unpack('!H', totalLength)[0]] #ihl->totalength
         protocols[protocol](us, header, payload, ipOrigen)
+    else:
+        print("[process_IP_datagram] No function registered for protocol", protocol)
 
 
 def registerIPProtocol(callback,protocol):
@@ -245,8 +258,7 @@ def sendIPDatagram(dstIP,data,protocol):
     '''
     #TODO:
     header = bytearray()
-    print("[sendIPDatagram] Sending frame with protocol", protocol, "to", dstIP)
-    #if protocol != IP: return False
+    print("[sendIPDatagram] Sending frame with protocol", protocol, "to", '{:12}'.format(socket.inet_ntoa(struct.pack('!I',dstIP))))
 
     len_opts = len(ipOpts) if ipOpts else 0
     if len_opts % 4 != 0:
@@ -258,50 +270,37 @@ def sendIPDatagram(dstIP,data,protocol):
     num_fragmentos = math.ceil(len(data) / max_len_datos_utiles)
     last_frag_len = len(data) - (max_len_datos_utiles * (num_fragmentos-1))
     totalLength = max_len_datos_utiles + header_len
+    print(num_fragmentos, max_len_datos_utiles, header_len)
 
-    if num_fragmentos > 1:
-        for i in range (num_fragmentos-1):
-            ini = i*max_len_datos_utiles
-            fin = (i+1)*max_len_datos_utiles #TODO: revisar este +1 (es para el ini:fin que no llega a fin)
-            header += bytes([0x69])#byte con 04 en 4 bits y el tamano de la cabecera en otros 4
-            header += bytes([0x00])
-            header += bytes(struct.pack('!H', totalLength))
-            header += bytes(struct.pack('!H', IPID))
-            header += bytes([0x69])#byte con flags (MF a 1) y offset (ini/8)
-            header += bytes(struct.pack('B', 64))
-            header += protocol
-            header += bytes(struct.pack('!H', 0)) #checksum a 0 ahora
-            header += bytes(struct.pack('!I', myIP))
-            header += bytes(struct.pack('!I', dstIP))
-            if ipOpts: header += ipOpts
-            header[10:12] = chksum(header) #calculamos el checksum
-            header += data[ini:fin]
-            if netmask & bytes(struct.pack('!I', myIP)) == netmask & bytes(struct.pack('!I', dstIP)):
-                sendEthernetFrame(header, len(header), bytes([0x08, 0x00]), ARPResolution(dstIP))
-            else:
-                sendEthernetFrame(header, len(header), bytes([0x08, 0x00]), ARPResolution(defaultGW))
-    #do same for the last one, with mf=0 and last_frag_len
-    ini = (num_fragmentos-1)*max_len_datos_utiles
-    fin = num_fragmentos*max_len_datos_utiles #TODO: revisar este +1 (es para el ini:fin que no llega a fin)
-    header += bytes([0x69])#byte con 04 en 4 bits y el tamano de la cabecera en otros 4
-    header += bytes([0x00])
-    header += bytes(struct.pack('!H', totalLength))
-    header += bytes(struct.pack('!H', IPID))
-    header += bytes([0x69])#byte con flags (MF a 0) y offset (ini/8)
-    header += bytes(struct.pack('B', 64))
-    header += protocol
-    header += bytes(struct.pack('!H', 0)) #checksum a 0 ahora
-    header += bytes(struct.pack('!I', myIP))
-    header += bytes(struct.pack('!I', dstIP))
-    if ipOpts: header += ipOpts
-    header[10:12] = struct.pack('!H', chksum(header))
-    header += data[ini:fin]
-    if (netmask & myIP) == (netmask & dstIP):
-        print("[sendIPDatagram] Seems", str(dstIP), "is in my network.")
-        sendEthernetFrame(header, len(header), bytes([0x08, 0x00]), ARPResolution(dstIP))
-    else:
-        print("[sendIPDatagram] Seems", str(dstIP), "is NOT in my network.")
-        sendEthernetFrame(header, len(header), bytes([0x08, 0x00]), ARPResolution(defaultGW))
+    mf_bits = 0b00100000
+    for i in range (num_fragmentos):
+        ini = i*max_len_datos_utiles
+        fin = (i+1)*max_len_datos_utiles #TODO: revisar este +1 (es para el ini:fin que no llega a fin)
+        if i == num_fragmentos-1:
+            mf_bits = 0
+            fin = ini + last_frag_len
+            totalLength = last_frag_len + header_len
+        header += bytes(struct.pack('B', 0b01000000 + int(header_len/4)))#byte con 04 en 4 bits y hlen reducido en otros 4
+        header += bytes([0x00])#type of service always 0
+        header += bytes(struct.pack('!H', totalLength))
+        header += bytes(struct.pack('!H', IPID))
+        header += bytes(struct.pack('B', mf_bits + int(ini/256)))
+        header += bytes(struct.pack('B', ini%256))
+        header += bytes(struct.pack('B', 64))
+        header += bytes(struct.pack('B', protocol))
+        header += bytes(struct.pack('!H', 0)) #checksum a 0 ahora
+        header += bytes(struct.pack('!I', myIP))
+        header += bytes(struct.pack('!I', dstIP))
+        if ipOpts: 
+            header += ipOpts
+        header[10:12] = bytes(struct.pack('!H', chksum(header))) #calculamos el checksum
+        header += data[ini:fin]
+        if (netmask & myIP) == (netmask & dstIP):
+            print("[sendIPDatagram] Seems", '{:12}'.format(socket.inet_ntoa(struct.pack('!I',dstIP)) + " is in my network."))
+            sendEthernetFrame(header, len(header), bytes([0x08, 0x00]), ARPResolution(dstIP))
+        else:
+            print("[sendIPDatagram] Seems", '{:12}'.format(socket.inet_ntoa(struct.pack('!I',dstIP)) + " is NOT in my network."))
+            sendEthernetFrame(header, len(header), bytes([0x08, 0x00]), ARPResolution(defaultGW))
 
     IPID += 1
     return True

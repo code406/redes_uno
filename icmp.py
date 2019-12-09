@@ -2,7 +2,7 @@ from ip import *
 from threading import Lock
 import struct
 
-ICMP_PROTO = b'\x01'
+ICMP_PROTO = 1
 
 ICMP_ECHO_REQUEST_TYPE = 8
 ICMP_ECHO_REPLY_TYPE = 0
@@ -41,23 +41,23 @@ def process_ICMP_message(us,header,data,srcIp):
 
     '''
     #HACER
+    print("[process_ICMP_message] Processing ICMP message with data", data)
     checksum = data[2:4]
-
-    if checksum != 0:
-        return
-
+    #if checksum != 0:
+    #    return
     type = data[0]
     code = data[1]
-
     logging.debug(type)
     logging.debug(code)
 
-    if tipo == ICMP_ECHO_REQUEST_TYPE:
+    if type == ICMP_ECHO_REQUEST_TYPE:
+        print("[process_ICMP_message] It's ICMP_ECHO_REQUEST")
         identifier = data[4:6]
         sequenceNumber = data[6:8]
         sendICMPMessage(data[8:], ICMP_ECHO_REPLY_TYPE, code, identifier, sequenceNumber, srcIP)
 
-    if tipo == ICMP_ECHO_REPLY_TYPE:
+    if type == ICMP_ECHO_REPLY_TYPE:
+        print("[process_ICMP_message] It's ICMP_ECHO_REPLY")
         with timeLock:
             time = header.ts.tv_sec - icmp_send_times[dstIP + icmp_id + icmp_seqnum]
         print("ESTIMACION DE RTT: {}".format(time))
@@ -107,9 +107,11 @@ def sendICMPMessage(data,type,code,icmp_id,icmp_seqnum,dstIP):
     if len(message) % 2 != 0:
         message += bytes([0x00])
 
-    #TODO: pack chksum before asignment pls
-    message[2:4] = struct.pack('!H', chksum(message))
-    print("[sendICMPMessage] Sending message", message, "to", dstIP)
+    #SEEMS CHKSUM HAS TO BE LITTLE ENDIAN SO THAT WIRESHARK VALIDATES IT. WONDER WHY
+    message[2] = bytes(struct.pack('!H', chksum(message)))[1]
+    message[3] = bytes(struct.pack('!H', chksum(message)))[0]
+    #message[2:4] = bytes(struct.pack('!H', chksum(message)))
+    print("[sendICMPMessage] Sending message", message, "to", '{:12}'.format(socket.inet_ntoa(struct.pack('!I',dstIP))))
 
     if type == ICMP_ECHO_REQUEST_TYPE:
         with timeLock:

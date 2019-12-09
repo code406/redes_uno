@@ -2,7 +2,7 @@ from ip import *
 import struct
 
 UDP_HLEN = 8
-UDP_PROTO = bytes(struct.pack('B', 17))
+UDP_PROTO = 17
 
 def getUDPSourcePort():
     '''
@@ -41,14 +41,10 @@ def process_UDP_datagram(us,header,data,srcIP):
 
     '''
     #HACER
-    '''Hace falta?
-    if protocolo != 17:
-        return
-    '''
-    puertoOrigen = data[0:2]
-    puertoDestino = data[2:4]
-    datos = data[8:] #Han puesto 10???
-
+    print("[process_UDP_message] IN", data)
+    puertoOrigen = bytes(data[0:2])
+    puertoDestino = bytes(data[2:4])
+    datos = bytes(data[8:]) #Han puesto 10???
     logging.debug(puertoOrigen)
     logging.debug(puertoDestino)
     logging.debug(datos)
@@ -75,18 +71,12 @@ def sendUDPDatagram(data,dstPort,dstIP):
     '''
     #HACER
     datagram = bytes()
-
-    puertoOrigen = getUDPSourcePort()
-    puertoDestino = dstPort
-    length = UDP_HLEN + len(data)
-    checksum = bytes([0x00,0x00])
-
-    #Ver como formatearlo bien
-    datagram += struct.pack('!H', puertoOrigen)
-    datagram += struct.pack('!H', puertoDestino)
-    datagram += struct.pack('!H',length)
-    datagram += checksum
+    datagram += struct.pack('!H', getUDPSourcePort())
+    datagram += struct.pack('!H', dstPort)
+    datagram += struct.pack('!H', UDP_HLEN + len(data))
+    datagram += bytes([0x00,0x00]) #checksum always 0
     datagram += data
+    print("[sendICMPMessage] Sending datagram", datagram, "to", '{:12}'.format(socket.inet_ntoa(struct.pack('!I',dstIP))))
 
     sendIPDatagram(dstIP, datagram, UDP_PROTO)
 

@@ -296,7 +296,7 @@ def ARPResolution(ip):
     with cacheLock:
         mac = cache.get(ip)
         if mac != None:
-            print("[ARPResolution] Mac was cached:", mac)
+            print("[ARPResolution] Mac was cached:", ':'.join(['{:02X}'.format(b) for b in mac]))
             return mac
 
     with globalLock:
@@ -313,7 +313,7 @@ def ARPResolution(ip):
                 data = createARPRequest(ip)
                 sendEthernetFrame(data, len(data), bytes([0x08,0x06]), broadcastAddr)
             else:
-                print("[ARPResolution] Resolved MAC:", resolvedMAC)
+                print("[ARPResolution] Resolved MAC:", ':'.join(['{:02X}'.format(b) for b in resolvedMAC]))
                 return resolvedMAC
     print("[ARPResolution] MAC unresolved")
     return None
