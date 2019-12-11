@@ -126,7 +126,7 @@ def process_IP_datagram(us,header,data,srcMac):
     '''
     #TODO:
     version = data[0] & 0xF0
-    ihl = data[0] & 0x0F
+    ihl = (data[0] & 0x0F)*4
     typeOfService = data[1]
     totalLength = data[2:4]
     IPID_read = data[4:6] #se llama asi para no destrozar la variable global IPID
@@ -257,7 +257,6 @@ def sendIPDatagram(dstIP,data,protocol):
 
     '''
     #TODO:
-    header = bytearray()
     print("[sendIPDatagram] Sending frame with protocol", protocol, "to", '{:12}'.format(socket.inet_ntoa(struct.pack('!I',dstIP))))
 
     len_opts = len(ipOpts) if ipOpts else 0
@@ -274,6 +273,8 @@ def sendIPDatagram(dstIP,data,protocol):
 
     mf_bits = 0b00100000
     for i in range (num_fragmentos):
+        print("\n------------------\nVUELTA DEL FOR----------------------\n")
+        header = bytearray()
         ini = i*max_len_datos_utiles
         fin = (i+1)*max_len_datos_utiles #TODO: revisar este +1 (es para el ini:fin que no llega a fin)
         if i == num_fragmentos-1:
@@ -293,8 +294,10 @@ def sendIPDatagram(dstIP,data,protocol):
         header += bytes(struct.pack('!I', dstIP))
         if ipOpts: 
             header += ipOpts
+        print("ELHEADER:", header)
         header[10:12] = bytes(struct.pack('!H', chksum(header))) #calculamos el checksum
         header += data[ini:fin]
+        print("HEADERLEN: ", len(header))
         if (netmask & myIP) == (netmask & dstIP):
             print("[sendIPDatagram] Seems", '{:12}'.format(socket.inet_ntoa(struct.pack('!I',dstIP)) + " is in my network."))
             sendEthernetFrame(header, len(header), bytes([0x08, 0x00]), ARPResolution(dstIP))

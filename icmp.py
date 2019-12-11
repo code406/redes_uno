@@ -50,16 +50,20 @@ def process_ICMP_message(us,header,data,srcIp):
     logging.debug(type)
     logging.debug(code)
 
+
+    identifier = struct.unpack('!H', data[4:6])[0]
+    sequenceNumber = struct.unpack('!H', data[6:8])[0]
     if type == ICMP_ECHO_REQUEST_TYPE:
         print("[process_ICMP_message] It's ICMP_ECHO_REQUEST")
-        identifier = data[4:6]
-        sequenceNumber = data[6:8]
-        sendICMPMessage(data[8:], ICMP_ECHO_REPLY_TYPE, code, identifier, sequenceNumber, srcIP)
+        #print("EL SEQ:  ", struct.unpack('!H', sequenceNumber)[0])
+        print("SRC IP:", srcIp, "identifier:", identifier, "SEQ:", sequenceNumber)
+        sendICMPMessage(data[8:], ICMP_ECHO_REPLY_TYPE, code, identifier, sequenceNumber, struct.unpack('!I', srcIp)[0])
 
     if type == ICMP_ECHO_REPLY_TYPE:
         print("[process_ICMP_message] It's ICMP_ECHO_REPLY")
+        print("SRC IP:", srcIp, "identifier:", identifier, "SEQ:", sequenceNumber)
         with timeLock:
-            time = header.ts.tv_sec - icmp_send_times[dstIP + icmp_id + icmp_seqnum]
+            time = header.ts.tv_sec - icmp_send_times[struct.unpack('!I', srcIp)[0] + identifier + sequenceNumber]
         print("ESTIMACION DE RTT: {}".format(time))
 
 
@@ -100,12 +104,9 @@ def sendICMPMessage(data,type,code,icmp_id,icmp_seqnum,dstIP):
     message += bytes(struct.pack('B', type))
     message += bytes(struct.pack('B', code))
     message += bytes([0x00,0x00])
-    message += bytes(struct.pack('B', icmp_id))
-    message += bytes(struct.pack('B', icmp_seqnum))
+    message += bytes(struct.pack('!H', icmp_id))
+    message += bytes(struct.pack('!H', icmp_seqnum))
     message += data
-
-    if len(message) % 2 != 0:
-        message += bytes([0x00])
 
     #SEEMS CHKSUM HAS TO BE LITTLE ENDIAN SO THAT WIRESHARK VALIDATES IT. WONDER WHY
     message[2] = bytes(struct.pack('!H', chksum(message)))[1]

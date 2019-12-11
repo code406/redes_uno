@@ -44,7 +44,7 @@ def process_UDP_datagram(us,header,data,srcIP):
     print("[process_UDP_message] IN", data)
     puertoOrigen = bytes(data[0:2])
     puertoDestino = bytes(data[2:4])
-    datos = bytes(data[8:]) #Han puesto 10???
+    datos = bytes(data[8:])
     logging.debug(puertoOrigen)
     logging.debug(puertoDestino)
     logging.debug(datos)
