@@ -143,9 +143,9 @@ def process_IP_datagram(us,header,data,srcMac):
 
     print("[process_IP_datagram] Extracted all fields from datagram")
 
-    #if chksum(data) != 0: 
-    #    print("[process_IP_datagram] Checksum != 0. Returning")
-    #    return
+    if chksum(data[:4*ihl]) != 0: 
+        print("[process_IP_datagram] Checksum != 0, it's",chksum(data),".Returning")
+        return
     #OJO: Dice "Analizar los bits de de MF y el offset". Que analizamos de mf??
     #OJO: Dice "para obtener el valor real de offset se debe multiplicar por 8"
     #if offset != 0: return #
@@ -273,7 +273,7 @@ def sendIPDatagram(dstIP,data,protocol):
 
     mf_bits = 0b00100000
     for i in range (num_fragmentos):
-        print("\n------------------\nVUELTA DEL FOR----------------------\n")
+        print("\n------------------VUELTA DEL FOR----------------------\n")
         header = bytearray()
         ini = i*max_len_datos_utiles
         fin = (i+1)*max_len_datos_utiles #TODO: revisar este +1 (es para el ini:fin que no llega a fin)
@@ -295,7 +295,7 @@ def sendIPDatagram(dstIP,data,protocol):
         if ipOpts: 
             header += ipOpts
         print("ELHEADER:", header)
-        header[10:12] = bytes(struct.pack('!H', chksum(header))) #calculamos el checksum
+        header[10:12] = bytes(struct.pack('<H', chksum(header))) #calculamos el checksum
         header += data[ini:fin]
         print("HEADERLEN: ", len(header))
         if (netmask & myIP) == (netmask & dstIP):
