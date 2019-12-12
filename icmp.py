@@ -54,14 +54,13 @@ def process_ICMP_message(us,header,data,srcIp):
     identifier = struct.unpack('!H', data[4:6])[0]
     sequenceNumber = struct.unpack('!H', data[6:8])[0]
     if type == ICMP_ECHO_REQUEST_TYPE:
-        print("[process_ICMP_message] It's ICMP_ECHO_REQUEST")
-        #print("EL SEQ:  ", struct.unpack('!H', sequenceNumber)[0])
-        print("SRC IP:", srcIp, "identifier:", identifier, "SEQ:", sequenceNumber)
+        print("[process_ICMP_message] Received an ICMP_ECHO_REQUEST")
+        #print("SRC IP:", srcIp, "identifier:", identifier, "SEQ:", sequenceNumber)
         sendICMPMessage(data[8:], ICMP_ECHO_REPLY_TYPE, code, identifier, sequenceNumber, struct.unpack('!I', srcIp)[0])
 
     if type == ICMP_ECHO_REPLY_TYPE:
-        print("[process_ICMP_message] It's ICMP_ECHO_REPLY")
-        print("SRC IP:", srcIp, "identifier:", identifier, "SEQ:", sequenceNumber)
+        print("[process_ICMP_message] Received an ICMP_ECHO_REPLY")
+        #print("SRC IP:", srcIp, "identifier:", identifier, "SEQ:", sequenceNumber)
         with timeLock:
             time = header.ts.tv_sec - icmp_send_times[struct.unpack('!I', srcIp)[0] + identifier + sequenceNumber]
         print("ESTIMACION DE RTT: {}".format(time))
@@ -112,7 +111,7 @@ def sendICMPMessage(data,type,code,icmp_id,icmp_seqnum,dstIP):
     message[2] = bytes(struct.pack('!H', chksum(message)))[1]
     message[3] = bytes(struct.pack('!H', chksum(message)))[0]
     #message[2:4] = bytes(struct.pack('!H', chksum(message)))
-    print("[sendICMPMessage] Sending message", message, "to", '{:12}'.format(socket.inet_ntoa(struct.pack('!I',dstIP))))
+    print("[sendICMPMessage] Sending message to", '{:12}'.format(socket.inet_ntoa(struct.pack('!I',dstIP))))
 
     if type == ICMP_ECHO_REQUEST_TYPE:
         with timeLock:

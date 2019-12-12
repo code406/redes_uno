@@ -93,21 +93,21 @@ def processARPRequest(data,MAC):
     '''
     #TODO implementar aquí
     global myIP
-    print("[processARPRequest] Processing ARP Request")
+    #print("[processARPRequest] Processing ARP Request")
     macOrigen = data[0:6]
 
     if macOrigen != MAC:
-        print("[processARPRequest] ARP MAC not matching Ethernet MAC")
+        #print("[processARPRequest] ARP MAC not matching Ethernet MAC")
         return
 
     ipOrigen = data[6:10]
     ipDestino = data[16:20]
 
     if ipDestino != struct.pack('!I',myIP):
-        print("[processARPRequest] This request is not for me")
+        #print("[processARPRequest] This request is not for me")
         return
 
-    print("[processARPRequest] Calling createARPReply")
+    #print("[processARPRequest] Calling createARPReply")
     reply = createARPReply(ipOrigen, macOrigen)
     sendEthernetFrame(reply,len(reply), bytes([0x08,0x06]), macOrigen)
 
@@ -136,11 +136,11 @@ def processARPReply(data,MAC):
     '''
     global requestedIP,resolvedMAC,awaitingResponse,cache
     #TODO implementar aquí
-    print("[processARPReply] Processing ARP Reply")
+    #print("[processARPReply] Processing ARP Reply")
     macOrigen = data[0:6]
 
     if macOrigen != MAC:
-        print("[processARPReply] ARP MAC not matching Ethernet MAC")
+        #print("[processARPReply] ARP MAC not matching Ethernet MAC")
         return
 
     ipOrigen = data[6:10]
@@ -149,20 +149,20 @@ def processARPReply(data,MAC):
 
     #print("[processARPReply] Reply read: ipDestino:", str(ipDestino), "myIP:", str(struct.pack('!I',myIP)))
     if ipDestino != struct.pack('!I',myIP):
-        print("[processARPReply] This reply is not for me")
+        #print("[processARPReply] This reply is not for me")
         return
 
     with globalLock:
         if struct.unpack('!I',ipOrigen)[0] != requestedIP:
             return
-        print("[processARPReply] Saving resolved MAC in global var")
+        #print("[processARPReply] Saving resolved MAC in global var")
         resolvedMAC = macOrigen
         awaitingResponse = False
         requestedIP = None
 
     with cacheLock:
         cachekey = struct.unpack('!I',ipOrigen)[0]
-        print("[processARPReply] Adding MAC for key", cachekey, "to cache")
+        #print("[processARPReply] Adding MAC for key", cachekey, "to cache")
         cache[cachekey] = macOrigen
 
 def createARPRequest(ip):
@@ -174,7 +174,7 @@ def createARPRequest(ip):
         Retorno: Bytes con el contenido de la trama de petición ARP
     '''
     global myMAC,myIP, ARPHeader
-    print("[createARPRequest] Creating Request")
+    #print("[createARPRequest] Creating Request")
     frame = bytes()
     frame += ARPHeader
     frame += bytes([0x00,0x01])
@@ -197,7 +197,7 @@ def createARPReply(IP,MAC):
         Retorno: Bytes con el contenido de la trama de petición ARP
     '''
     global myMAC,myIP, ARPHeader
-    print("[createARPReply] Creating Reply")
+    #print("[createARPReply] Creating Reply")
     frame = bytes()
     frame += ARPHeader
     frame += bytes([0x00,0x02])
@@ -235,13 +235,13 @@ def process_arp_frame(us,header,data,srcMac):
     dataNew = data[8:]
 
     if opCode == bytes([0x00,0x01]):
-        print("[process_arp_frame] opCode 0x0001. Calling processARPRequest")
+        #print("[process_arp_frame] opCode 0x0001. Calling processARPRequest")
         processARPRequest(dataNew, srcMac)
     elif opCode == bytes([0x00,0x02]):
-        print("[process_arp_frame] opCode 0x0002. Calling processARPReply")
+        #print("[process_arp_frame] opCode 0x0002. Calling processARPReply")
         processARPReply(dataNew, srcMac)
     else:
-        print("[process_arp_frame] UNKNOWN OPCODE IN FRAME" + str(opCode))
+        #print("[process_arp_frame] UNKNOWN OPCODE IN FRAME" + str(opCode))
         return
 
 def initARP(interface):

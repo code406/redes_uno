@@ -41,7 +41,7 @@ def process_UDP_datagram(us,header,data,srcIP):
 
     '''
     #HACER
-    print("[process_UDP_message] IN", data)
+    print("[process_UDP_message] RECEIVED", data)
     puertoOrigen = bytes(data[0:2])
     puertoDestino = bytes(data[2:4])
     datos = bytes(data[8:])

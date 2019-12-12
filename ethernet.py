@@ -73,7 +73,7 @@ def process_Ethernet_frame(us,header,data):
     #print("[process_ethernet_frame]: " + "dest: " + str(destino) + "src: " + str(origen) + "ethertype: " + str(int.from_bytes(ethertype, byteorder='big')))
     if (destino != broadcastAddr) and (destino != macAddress):
         return
-    print("[process_Ethernet_frame]", "Processing a frame for", ':'.join(['{:02X}'.format(b) for b in destino]))
+    #print("[process_Ethernet_frame]", "Processing a frame for", ':'.join(['{:02X}'.format(b) for b in destino]))
 
     etherkey = int.from_bytes(ethertype, byteorder='big')
     if upperProtos.get(etherkey) == None:
@@ -218,7 +218,7 @@ def sendEthernetFrame(data,len,etherType,dstMac):
         Retorno: 0 si todo es correcto, -1 en otro caso
     '''
     global macAddress,handle
-    print("[sendEthernetFrame] Frame sent from", ':'.join(['{:02X}'.format(b) for b in macAddress]), "to", ':'.join(['{:02X}'.format(b) for b in dstMac]))
+    #print("[sendEthernetFrame] Frame sent from", ':'.join(['{:02X}'.format(b) for b in macAddress]), "to", ':'.join(['{:02X}'.format(b) for b in dstMac]))
     if (len+14) > ETH_FRAME_MAX:
         print("[sendEthernetFrame] Oversized")
         return -1
@@ -234,7 +234,7 @@ def sendEthernetFrame(data,len,etherType,dstMac):
             trama+=bytes(0)
             len = ETH_FRAME_MIN-14
 
-    print("[sendEthernetFrame] Frame:", trama)
+    #print("[sendEthernetFrame] Frame:", trama)
     if (pcap_inject(handle, trama, len+14) == (len+14)):
         return 0
     return -1
