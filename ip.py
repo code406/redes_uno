@@ -130,9 +130,16 @@ def process_IP_datagram(us,header,data,srcMac):
     typeOfService = data[1]
     totalLength = data[2:4]
     IPID_read = data[4:6] #se llama asi para no destrozar la variable global IPID
-    flagDF = (data[6]>>5 & 0x02)>>1
-    flagMF = data[6]>>5 & 0x01
-    offset = (struct.unpack('!H', data[6:8])[0] & 0x1F0F)*8
+    flagDF = ((data[6]>>5) & 0x02)>>1
+    flagMF = (data[6]>>5) & 0x01
+    print("DATA 6:", data[6:8])
+    offset = 0
+    '''if flagMF:
+        offset = ((struct.unpack('B', data[6])[0])*256-0b00100000)*8 + struct.unpack('B', data[7])[0]*8
+    else:
+        offset = (struct.unpack('B', data[6])[0])*256*8 + struct.unpack('B', data[7])[0]*8
+    '''
+
     timeToLive = data[8]
     protocol = data[9]
     headerChecksum = data[10:12]
@@ -153,13 +160,13 @@ def process_IP_datagram(us,header,data,srcMac):
     logging.debug(IPID_read)
     logging.debug(flagDF)
     logging.debug(flagMF)
-    logging.debug(offset*8)
+    logging.debug(offset)
     logging.debug(ipOrigen)
     logging.debug(ipDestino)
     logging.debug(protocol)
 
     if protocols.get(protocol):
-        payload = data[ihl:struct.unpack('!H', totalLength)[0]] #ihl->totalength
+        payload = data[ihl:]
         protocols[protocol](us, header, payload, ipOrigen)
     else:
         print("[process_IP_datagram] No function registered for protocol", protocol)
@@ -285,7 +292,7 @@ def sendIPDatagram(dstIP,data,protocol):
         if i == num_fragmentos-1:
             header += bytes(struct.pack('B', div//256))
         else:
-            header += bytes(struct.pack('B', div//256 + 0b00100000))
+            header += bytes(struct.pack('B', div//256 + 0x20))
         header += bytes(struct.pack('B', div%256))
 
         header += bytes(struct.pack('B', 64))
